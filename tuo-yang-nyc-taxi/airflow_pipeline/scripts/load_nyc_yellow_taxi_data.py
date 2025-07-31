@@ -14,6 +14,8 @@ from typing import List
 # Auto-Locate project root
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from scripts import config
+from scripts.logger import get_logger
+logger = get_logger()
 
 def generate_url(year: int, month: int) -> str:
     """Generate the download URL for the given year and month"""
@@ -31,14 +33,14 @@ def download_to_local(year: int, months: List[int]) -> List[str]:
         local_path = os.path.join(config.TMP_PARQUET_PATH, file_name)
 
         if not os.path.exists(local_path):  # To prevent repetitive downloading
-            print(f"📥 Downloading {url}")
+            logger.info(f"📥 Downloading {url}")
             try:
                 response = requests.get(url)
                 response.raise_for_status()
                 with open(local_path, "wb") as f:
                     f.write(response.content)
             except Exception as e:
-                print(f"❌ Failed to download {url}: {e}")
+                logger.error(f"❌ Failed to download {url}: {e}")
                 continue
 
         local_paths.append(local_path)
@@ -49,4 +51,4 @@ if __name__ == "__main__":
     year = 2023
     months = [1, 2, 3]
     local_paths = download_to_local(year, months)
-    print(local_paths)
+    logger.info(local_paths)

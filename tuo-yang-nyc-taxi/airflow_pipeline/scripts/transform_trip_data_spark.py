@@ -22,13 +22,43 @@ from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql.functions import col, to_timestamp, regexp_replace, trim
 from pyspark.sql.types import *
 from scripts.load_nyc_yellow_taxi_data import download_to_local
+from scripts.logger import get_logger
 from typing import List
 from pathlib import Path
 from scripts import config
 
+logger = get_logger()
+
 # Fields that must be cast to specific types for consistency
 LONG_COLUMNS = ['vendorid', 'ratecodeid', 'pulocationid', 'dolocationid', 'payment_type']
 TIMPSTAMP_COLUMNS = ['tpep_pickup_datetime', 'tpep_dropoff_datetime']
+
+# Excepted schema fields (based on official NYC Taxi spec)
+EXPECTED_FIELDS = [
+    'VendorID', 'tpep_pickup_datetime', 'tpep_dropoff_datetime',
+    'passenger_count', 'trip_distance', 'RatecodeID', 'store_and_fwd_flag',
+    'PULocationID', 'DOLocationID', 'payment_type', 'fare_amount', 'extra',
+    'mta_tax', 'tip_amount', 'tolls_amount', 'improvement_surcharge',
+    'total_amount', 'congestion_surcharge', 'airport_fee'
+]
+
+def validate_schema(df: DataFrame, expected_fields: List[str]) -> None:
+    """
+    Print warning if excepted schema fields are missing or if extra fields are
+    present. This does NOT stop execution; it's for debugging / data quality awareness.
+    """
+    actual_fields = df.columns
+    missing = [col for col in expected_fields if col not in actual_fields]
+    extra = [col for col in actual_fields if col not in expected_fields]
+
+    if missing:
+        logger.warning(f"Missing columns: {missing}")
+    else:
+        logger.info("All expected columns are present.")
+
+    if extra:
+        logger.info(f"Extra columns not in expected schema: {extra}")
+
 
 # ---------- Transformation Functions ----------
 
@@ -82,6 +112,8 @@ def transform_trip_data(df: DataFrame) -> DataFrame:
     """
     Full transformation pipeline
     """
+    validate_schema(df, EXPECTED_FIELDS)  # Schema validation check
+
     df = clean_column_names(df)
     df = cast_column_types(df)
     df = drop_useless_columns(df)
@@ -106,7 +138,7 @@ def main(year: int, months: List[int]) -> DataFrame:
     # Read and transform each file independently
     dfs = []
     for path in input_paths:
-        print(f"Reading: {path}")
+        logger.info(f"Reading: {path}")
         df = spark.read.parquet(path)
         df = transform_trip_data(df)
         dfs.append(df)
@@ -128,7 +160,7 @@ def main(year: int, months: List[int]) -> DataFrame:
     # Save as a CSV file using standard Python filesystem (no winutils dependency)
     output_csv_path = os.path.join(config.LOCAL_CSV_PATH, filename)
     pdf_all_sampled.to_csv(output_csv_path, index=False)
-    print(f"Saved cleaned data to: {output_csv_path}")
+    logger.info(f"Saved cleaned data to: {output_csv_path}")
 
     return df_all
 

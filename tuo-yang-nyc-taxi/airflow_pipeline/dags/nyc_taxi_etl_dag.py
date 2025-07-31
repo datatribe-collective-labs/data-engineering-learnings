@@ -16,6 +16,9 @@ if PROJECT_ROOT not in sys.path:
 # Import existing pipeline functions
 from scripts import main_debug
 from scripts import upload_to_big_query
+from scripts.logger import get_logger
+
+logger = get_logger()
 
 # Wrap functions with error logging
 def wrap_with_log(func):
@@ -23,8 +26,8 @@ def wrap_with_log(func):
         try:
             return func(*args, **kwargs)
         except Exception as e:
-            print(f"\nError in {func.__name__}: {e}")
-            traceback.print_exc()
+            logger.error(f"\nError in {func.__name__}: {e}")
+            logger.exception("Full traceback:")
             raise
     return wrapped
 
@@ -50,9 +53,10 @@ default_args = {
     'start_date': datetime(2024, 1, 1),
     'retries': 2,
     'retry_delay': timedelta(minutes=5),
-    'email': [],
+    # Email alert config (placeholder, update when deploying)
+    'email': ['your@email.com'],    # Replace with your actual email or leave as placeholder
     'email_on_failure': False,
-    'eamil_on_retry': False,
+    'email_on_retry': False,
 }
 
 with DAG(

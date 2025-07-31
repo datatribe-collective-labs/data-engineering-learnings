@@ -8,9 +8,12 @@ import pandas as pd
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from scripts.upload_to_big_query import upload_csv_to_bq, execute_dynamic_sql
+from scripts.logger import get_logger
+
+logger = get_logger()
 
 def step_1_and_2_transform_with_spark():
-    print(f"Step 1-2: Loading raw data & tranforming with Spark...")
+    logger.info("Step 1-2: Loading raw data & tranforming with Spark...")
     from scripts import config
     from scripts.transform_trip_data_spark import main as spark_transform_main
     year = config.SETTINGS["data_config"]["year"]
@@ -18,11 +21,11 @@ def step_1_and_2_transform_with_spark():
     spark_transform_main(year, months)
 
 def step_3_upload_to_bigquery():
-    print("Step 3: Uploading to BigQuery...")
+    logger.info("Step 3: Uploading to BigQuery...")
     upload_csv_to_bq()
 
 def step_4_create_summary(granularity="HOUR"):
-    print(f"Step 4: Creating summary table ({granularity})...")
+    logger.info(f"Step 4: Creating summary table ({granularity})...")
     execute_dynamic_sql(granularity=granularity)
 
 def run_pipeline(run_all=True, step=None):
@@ -38,7 +41,7 @@ def run_pipeline(run_all=True, step=None):
     elif step == "summary":
         step_4_create_summary()
     else:
-        print(f"Invalid step: {step}")
+        logger.error(f"Invalid step: {step}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="NYC Yellow Taxi Data Pipeline")

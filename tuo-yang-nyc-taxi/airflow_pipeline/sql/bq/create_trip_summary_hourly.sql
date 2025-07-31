@@ -1,4 +1,4 @@
--- Create hourly summary table
+-- Create hourly summary table on BigQuery
 CREATE OR REPLACE TABLE `precise-antenna-461516-u3.nyc_taxi.trip_summary_hourly` AS
 SELECT
     DATETIME_TRUNC(CAST(tpep_pickup_datetime AS TIMESTAMP), HOUR) AS pickup_hour,
@@ -12,6 +12,6 @@ FROM
 WHERE
     tpep_pickup_datetime BETWEEN '2023-01-01' AND '2023-03-31'
 GROUP BY
-    pickup_hour
+    DATETIME_TRUNC(CAST(tpep_pickup_datetime AS TIMESTAMP), HOUR)
 ORDER BY
     pickup_hour;

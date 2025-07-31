@@ -1,6 +1,14 @@
 # scripts/sql_utils.py
 
+import sys
+import os
+# Auto-Locate project root
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from scripts import config
+from scripts.logger import get_logger
+
+logger = get_logger()
 
 def render_create_summary_sql(granularity: str = "Hour") -> str:
     """
@@ -13,10 +21,7 @@ def render_create_summary_sql(granularity: str = "Hour") -> str:
     group_col = "pickup_" + granularity.lower()
 
     return f"""
-    -- Drop table if exists
-    DROP TABLE IF EXISTS `{config.PROJECT_ID}.{config.DATASET_ID}.{config.SUMMARY_TABLE_NAME}`;
-
-    -- Create summary table
+    -- Create summary table (replace existing summary table if exists)
     CREATE OR REPLACE TABLE `{config.PROJECT_ID}.{config.DATASET_ID}.{config.SUMMARY_TABLE_NAME}` AS
     SELECT
         {trunc_func} AS {group_col},
@@ -30,7 +35,7 @@ def render_create_summary_sql(granularity: str = "Hour") -> str:
     WHERE
         tpep_pickup_datetime BETWEEN '2023-01-01' AND '2023-03-31'
     GROUP BY
-        {group_col}
+        {trunc_func}
     ORDER BY
         {group_col};
     """
@@ -67,29 +72,12 @@ def render_create_zone_summary_sql(granularity: str = "DAY", location_type: str 
     WHERE
         tpep_pickup_datetime BETWEEN '2023-01-01' AND '2023-03-31'
     GROUP BY
-        {group_col}, zone_id
+        {trunc_func}, {zone_col}
     ORDER BY
         {group_col}, zone_id;
     """
 
-def get_trip_summary_query():
-    """
-    Return SQL to query the trip summary created by render_create_summary_sql().
-    """
-    return f"""
-    SELECT
-        pickup_hour,
-        trip_count,
-        avg_fare,
-        avg_tip,
-        total_passengers,
-        avg_distance
-    FROM `{config.PROJECT_ID}.{config.DATASET_ID}.{config.SUMMARY_TABLE_NAME}`
-    ORDER BY pickup_hour
-    """
-
 if __name__ == "__main__":
-    print(render_create_summary_sql(granularity="HOUR"))
-    print(render_create_zone_summary_sql(granularity="DAY", location_type="pickup"))
-    print(render_create_zone_summary_sql(granularity="DAY", location_type="dropoff"))
-    print(get_trip_summary_query())
+    logger.info(render_create_summary_sql(granularity="HOUR"))
+    logger.info(render_create_zone_summary_sql(granularity="DAY", location_type="pickup"))
+    logger.info(render_create_zone_summary_sql(granularity="DAY", location_type="dropoff"))

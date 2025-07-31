@@ -17,6 +17,9 @@ import pandas as pd
 from google.cloud import bigquery
 from scripts.get_bigquery_client import get_bigquery_client
 from scripts.sql_utils import render_create_summary_sql, render_create_zone_summary_sql
+from scripts.logger import get_logger
+
+logger = get_logger()
 
 def build_csv_filename_from_config() -> str:
     """Construct csv filename based on year and months in settings."""
@@ -47,32 +50,32 @@ def upload_csv_to_bq():
         source_format = bigquery.SourceFormat.CSV
     )
 
-    print(f"Uploading {config.LOCAL_CSV_PATH} to {table_ref} ...")
+    logger.info(f"Uploading {config.LOCAL_CSV_PATH} to {table_ref} ...")
     load_job = client.load_table_from_dataframe(df, table_ref, job_config=job_config)
     load_job.result()
-    print(f"Upload complete: {load_job.output_rows} rows")
+    logger.info(f"Upload complete: {load_job.output_rows} rows")
 
 def execute_dynamic_sql(granularity="HOUR"):
     """Generate and execute dynamic SQL from config + granularity."""
     client = get_bigquery_client()
 
     query = render_create_summary_sql(granularity=granularity)
-    print(f"Executing dynamic SQL for summary ({granularity}) ...")
+    logger.info(f"Executing dynamic SQL for summary ({granularity}) ...")
 
     query_job = client.query(query)
     query_job.result()
-    print("SQL execution complete.")
+    logger.info("SQL execution complete.")
 
 def execute_zone_summary_sql(granularity="DAY", location_type="pickup"):
     """Create zone-level summary table by pickup or dropoff zones."""
     client = get_bigquery_client()
     
     query = render_create_zone_summary_sql(granularity=granularity, location_type=location_type)
-    print(f"Creating zone summary for {location_type} ({granularity}) ...")
+    logger.info(f"Creating zone summary for {location_type} ({granularity}) ...")
 
     query_job = client.query(query)
     query_job.result()
-    print(f"Zone summary table for {location_type} created.")
+    logger.info(f"Zone summary table for {location_type} created.")
 
 def run_upload_to_bq():
     upload_csv_to_bq()

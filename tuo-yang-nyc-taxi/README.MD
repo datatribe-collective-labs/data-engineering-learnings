@@ -183,6 +183,39 @@ DOCKER_IMAGE_PREFIX=bravo634
 ```
 This will ensure all services (Airflow, Streamlit, etc.) use my public Docker images.
 
+---
+
+### ▶️ Local Run (Optional Quick Start Without Docker)
+
+If you want to run parts of the pipeline locally without Docker (for quick testing or debugging), here’s how:
+
+#### 🌀 Run Airflow DAG Components
+
+You can run and debug individual DAG steps directly using:
+
+```bash
+python airflow_pipeline/scripts/main_debug.py
+```
+
+Make sure you have:
+- Installed all dependencies from `airflow_pipeline/requirements.txt`
+- Set up `.env` and `settings.yaml` in the `airflow_pipeline/config/ directory`
+
+#### 📊 Run Streamlit Dashboard
+To launch the Streamlit dashboard independently:
+
+```bash
+cd streamlit_app
+streamlit run app.py
+```
+
+Make sure:
+- Your `.env` file contains the correct BigQuery credentials
+- The summary table already exists in BigQuery
+- You’ve installed all dependencies from `streamlit_app/requirements.txt`
+
+This is a lightweight way to test the core features without spinning up Docker.
+
 ### 📁 Project Structure
 
 The repository is organized to reflect a modular and production-like data engineering pipeline. Here's a quick overview of the main components:
@@ -191,60 +224,67 @@ The repository is organized to reflect a modular and production-like data engine
 📁 Project Structure
 
 .github/workflows/               # CI setup for GitHub Actions (optional)
-├── docker.yml                   # Auto-builds Docker image on push
+├── docker.yml                   # Auto-build Docker image and push on commit
 
-.streamlit/                      # Streamlit UI config
-├── config.toml
+.streamlit/                      # Streamlit UI configuration
+├── config.toml                  # Custom theme and layout settings
 
-airflow_pipeline/                # Main Airflow pipeline (ETL logic)
-├── config/                      # DAG-level config files
-│   ├── airflow.cfg              # Airflow core settings
-│   └── settings.yaml            # Pipeline variables (year, month, etc.)
-├── dags/                        # Airflow DAG definitions
-│   └── nyc_taxi_etl_dag.py      # DAG for loading & transforming taxi data
-├── data/                        # Cleaned data outputs
-│   ├── processed/               # Final output CSVs
-│   └── tmp/                     # Temp files (if needed)
-├── logs/                        # Airflow DAG execution logs
-├── scripts/                     # Python modules used in DAG
-│   ├── get_bigquery_client.py
-│   ├── load_nyc_yellow_taxi_data.py
-│   ├── transform_trip_data_spark.py
-│   ├── upload_to_big_query.py
-│   └── sql_utils.py
-├── sql/                         # SQL query templates used in DAG
-├── .dockerignore                # Exclude unnecessary files from Docker build
-├── Dockerfile                   # Dockerfile for Airflow pipeline container
-└── requirements.txt             # Python dependencies for Airflow
+airflow_pipeline/                # Main directory for the Airflow ETL pipeline
+├── config/                      # Pipeline configuration files
+│   ├── airflow.cfg              # Airflow runtime settings
+│   └── settings.yaml            # Pipeline parameters (e.g., year/month)
+├── dags/                        # DAG definitions for Airflow
+│   └── nyc_taxi_etl_dag.py      # Main DAG for NYC Yellow Taxi data pipeline
+├── data/                        # Local data storage
+│   ├── processed/               # Cleaned CSV outputs
+│   ├── raw/                     # Original monthly Parquet files
+│   └── tmp/                     # Intermediate temp files (optional)
+├── logs/                        # Logs generated during Airflow runs
+├── scripts/                     # Python helper modules used in DAG
+│   ├── config.py                # Loads .env and settings.yaml
+│   ├── get_bigquery_client.py   # Auth wrapper for BigQuery
+│   ├── load_nyc_yellow_taxi_data.py  # Downloads and saves monthly data
+│   ├── logger.py                # Custom logging utility
+│   ├── main_debug.py            # Local dev entry point for pipeline testing
+│   ├── sql_utils.py             # Run SQL queries (BigQuery)
+│   ├── transform_trip_data_spark.py  # Cleans data using PySpark
+│   └── upload_to_big_query.py   # Uploads results to BigQuery
+├── sql/                         # SQL scripts used in the pipeline
+│   ├── bq/
+│   │   └── create_trip_summary_hourly.sql  # Creates hourly summary table in BigQuery
+│   └── raw/
+│       └── trip_summary_hourly.sql         # DuckDB-based SQL for local test
 
-creds/                           # GCP credentials (local only, not committed)
-├── gcp_service_account.example.json
+creds/                           # Local-only folder for GCP credentials
+└── gcp_service_account.example.json  # Example for service account key
 
-notebooks/                       # Jupyter notebooks for local exploration
-├── 01_explore_raw_data.ipynb
-├── 02_transform_trip_summary.ipynb
-├── 03_visualize_summary.ipynb
-└── 04_analyze_trip_summary.ipynb
+notebooks/                       # Jupyter notebooks for exploration
+├── 01_explore_raw_data.ipynb    # Schema, volume, and column analysis
+├── 02_transform_trip_summary.ipynb  # Local test of data cleaning logic
+└── 03_visualize_summary.ipynb   # Plots and KPIs (merged from previous 04)
 
-streamlit_app/                   # Streamlit frontend app
-├── pages/                       # Dashboard pages
-│   ├── Trend_Viewer.py
-│   └── Zone_Heatmap.py
-├── utils/                       # Shared utility functions for dashboard
-│   ├── config.py
-│   ├── get_bigquery_client.py
-│   └── sql_utils.py
-├── config.yaml                  # App-level settings (e.g., query range)
-├── app.py                       # Streamlit entry point
-├── .dockerignore                # Ignore build-time clutter (e.g. .ipynb_checkpoints)
-├── Dockerfile                   # Dockerfile for Streamlit deployment
-└── requirements.txt             # Python dependencies for dashboard
+streamlit_app/                   # Interactive dashboard built with Streamlit
+├── external/                    # External resources (e.g. GeoJSON files)
+│   └── taxi_zones.geojson       # NYC taxi zones for map rendering
+├── pages/                       # Modular pages for dashboard
+│   ├── Trend_Viewer.py          # Plots hourly trends over time
+│   └── Zone_Heatmap.py          # Visualizes pickup/dropoff heatmap by zone
+├── utils/                       # Reusable functions for Streamlit app
+│   ├── config.py                # Loads config.yaml and env vars
+│   ├── get_bigquery_client.py   # BigQuery access for dashboard
+│   ├── logger.py                # Logger for diagnostics
+│   └── sql_utils.py             # Shared SQL execution tools
+├── config.yaml                  # Dashboard config (e.g., date range, metrics)
+├── app.py                       # Main app entry point (use: `streamlit run app.py`)
+├── .dockerignore                # Prevents cache and temp files in image
+├── Dockerfile                   # Dockerfile for dashboard deployment
+└── requirements.txt             # Required Python packages for dashboard
 
-.env.example                     # Template for setting env vars
-.gitignore                       # Ignore config, credentials, etc. in Git
-docker-compose.yaml              # Main service configuration
-docker-compose.override.yaml     # Optional local override
-Makefile                         # CLI shortcut commands (optional)
+.env.example                     # Template for environment variables
+.gitignore                       # Git exclusions
+docker-compose.yaml              # Main Docker orchestration file
+docker-compose.override.yaml     # Local override (ports, mounts, etc.)
+Makefile                         # CLI shortcuts (optional)
 pyproject.toml                   # Python project metadata
 README.md                        # This documentation
 ```
@@ -303,5 +343,5 @@ Special thanks to:
 Feel free to connect or share feedback:
 
 - **GitHub**: [tuo-yang](https://github.com/TuoYang263)  
-- **LinkedIn**: [tuo-yang-linkedin-profile](https://linkedin.com/in/your-profile)  
+- **LinkedIn**: [tuo-yang-linkedin-profile](https://www.linkedin.com/in/tuo-yang-6b772b207/)
 - **Email**: yangtuomailbox@gmail.com

@@ -10,6 +10,8 @@ airflow_pipeline/data/**/*
 !airflow_pipeline/data/.gitkeep
 !airflow_pipeline/data/processed/.gitkeep
 !airflow_pipeline/data/tmp/.gitkeep
+!airflow_pipeline/data/raw/
+!airflow_pipeline/data/raw/*.parquet
 
 # Ignore all log content but keep the folder
 airflow_pipeline/logs/**/*
